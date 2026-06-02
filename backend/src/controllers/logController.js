@@ -18,8 +18,8 @@ exports.clear = asyncHandler(async (req, res) => {
 
 // GET /api/logs/export.csv
 exports.exportCSV = asyncHandler(async (_req, res) => {
-  const rows = [['Waktu', 'Aktor', 'Aksi', 'Detail', 'IP']];
-  logModel.list({ limit: 500 }).forEach((l) => rows.push([l.created_at, l.actor, l.action, l.detail, l.ip]));
+  const rows = [['Waktu', 'Aktor', 'Aksi', 'Detail', 'Sebelum', 'Sesudah', 'IP']];
+  logModel.list({ limit: 500 }).forEach((l) => rows.push([l.created_at, l.actor, l.action, l.detail, l.before_value || '', l.after_value || '', l.ip]));
   res.header('Content-Type', 'text/csv');
   res.attachment('log_aktivitas.csv');
   res.send('﻿' + toCSV(rows));

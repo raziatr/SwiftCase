@@ -2,9 +2,12 @@
 const { db, transaction } = require('../db/database');
 const productModel = require('./productModel');
 const ApiError = require('../utils/ApiError');
+const config = require('../config');
 
 function getItems(orderId) {
-  return db.prepare('SELECT product_id AS id, name, price, qty, note FROM order_items WHERE order_id=?').all(orderId);
+  return db.prepare(
+    'SELECT product_id AS id, name, price, qty, discount_amount AS discountAmount, note FROM order_items WHERE order_id=?'
+  ).all(orderId);
 }
 
 function hydrate(o) {
@@ -13,6 +16,7 @@ function hydrate(o) {
     id: o.id,
     queue: o.queue_no,
     userId: o.user_id,
+    customerId: o.customer_id || null,
     customer: o.customer_name,
     orderType: o.order_type,
     payMethod: o.pay_method,
@@ -20,6 +24,14 @@ function hydrate(o) {
     paymentRef: o.payment_ref,
     status: o.status,
     notes: o.notes,
+    discountId: o.discount_id || null,
+    discountName: o.discount_name || '',
+    itemDiscount: o.item_discount || 0,
+    discountAmount: o.discount_amount || 0,
+    subtotal: o.subtotal || o.raw_total || 0,
+    taxRate: o.tax_rate || 0,
+    taxAmount: o.tax_amount || 0,
+    rawTotal: o.raw_total || o.total,
     total: o.total,
     timestamp: o.created_at,
     items: getItems(o.id),
@@ -32,32 +44,52 @@ function nextQueue() {
   return 'A' + String(row.c + 1).padStart(3, '0');
 }
 
-// Pembuatan pesanan transaksional: validasi stok → simpan order+item → kurangi stok.
+// Transaksional: validasi stok → diskon item → diskon total → PPN → simpan → kurangi stok.
 const createTx = transaction((data) => {
-  let total = 0;
+  let subtotal = 0;
+  let itemDiscountTotal = 0;
+
   const items = data.items.map((it) => {
     const p = productModel.raw(it.id);
     if (!p || !p.active) throw ApiError.badRequest('Produk tidak tersedia (id ' + it.id + ')');
     if (p.stock < it.qty) throw ApiError.conflict(`Stok tidak cukup untuk ${p.name} (sisa ${p.stock})`);
-    total += p.price * it.qty;
-    return { id: p.id, name: p.name, price: p.price, qty: it.qty, note: (it.note || '').trim() };
+    const lineTotal = p.price * it.qty;
+    const lineDiscount = Math.max(0, Math.min(parseInt(it.discountAmount, 10) || 0, lineTotal));
+    subtotal += lineTotal;
+    itemDiscountTotal += lineDiscount;
+    return { id: p.id, name: p.name, price: p.price, qty: it.qty, discountAmount: lineDiscount, note: (it.note || '').trim() };
   });
+
+  const afterItem = subtotal - itemDiscountTotal;
+  const orderDiscount = Math.max(0, Math.min(parseInt(data.discountAmount, 10) || 0, afterItem));
+  const taxBase = afterItem - orderDiscount;
+  const taxRate = config.taxRate || 0;
+  const taxAmount = Math.round(taxBase * taxRate);
+  const total = taxBase + taxAmount;
 
   const queue = nextQueue();
   const info = db.prepare(
-    `INSERT INTO orders(queue_no,user_id,customer_name,order_type,pay_method,payment_status,payment_ref,status,notes,total)
-     VALUES(?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO orders(queue_no,user_id,customer_id,customer_name,order_type,pay_method,payment_status,
+      payment_ref,status,notes,discount_id,discount_name,item_discount,discount_amount,
+      subtotal,tax_rate,tax_amount,raw_total,total)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
-    queue, data.userId || null, data.customer, data.orderType || 'Dine-in',
-    data.payMethod || 'Tunai', data.paymentStatus || 'Belum Bayar', data.paymentRef || null,
-    'Baru', data.notes || '', total
+    queue, data.userId || null, data.customerId || null, data.customer,
+    data.orderType || 'Dine-in', data.payMethod || 'Tunai',
+    data.paymentStatus || 'Belum Bayar', data.paymentRef || null,
+    'Baru', data.notes || '',
+    data.discountId || null, data.discountName || null,
+    itemDiscountTotal, orderDiscount,
+    subtotal, taxRate, taxAmount, subtotal, total
   );
 
   const orderId = info.lastInsertRowid;
-  const insItem = db.prepare('INSERT INTO order_items(order_id,product_id,name,price,qty,note) VALUES(?,?,?,?,?,?)');
+  const insItem = db.prepare(
+    'INSERT INTO order_items(order_id,product_id,name,price,qty,discount_amount,note) VALUES(?,?,?,?,?,?,?)'
+  );
   const decStock = db.prepare('UPDATE products SET stock = stock - ? WHERE id = ?');
   for (const it of items) {
-    insItem.run(orderId, it.id, it.name, it.price, it.qty, it.note);
+    insItem.run(orderId, it.id, it.name, it.price, it.qty, it.discountAmount, it.note);
     decStock.run(it.qty, it.id);
   }
   return orderId;

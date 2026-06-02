@@ -43,6 +43,10 @@ exports.loginAdmin = asyncHandler(async (req, res) => {
     log.add({ actor: 'admin:' + username, action: 'Login admin GAGAL', detail: username, ip: req.ip });
     throw ApiError.unauthorized('Username atau password salah');
   }
+  if (admin.active === 0 || admin.active === false) {
+    log.add({ actor: 'admin:' + username, action: 'Login admin DITOLAK (nonaktif)', detail: username, ip: req.ip });
+    throw ApiError.forbidden('Akun ini telah dinonaktifkan. Hubungi administrator.');
+  }
   log.add({ actor: 'admin:' + username, action: 'Login admin', detail: `${username} (${admin.role})`, ip: req.ip });
   const token = sign({ sub: username, id: admin.id, type: 'admin', role: admin.role, name: admin.name });
   res.json({ token, admin: { id: admin.id, name: admin.name, username: admin.username, role: admin.role } });

@@ -27,6 +27,27 @@ const config = {
   lowStockThreshold: int(process.env.LOW_STOCK_THRESHOLD, 5),
   ordersPerPage: int(process.env.ORDERS_PER_PAGE, 10),
 
+  // Pajak / PPN (0.11 = 11%). Set 0 untuk menonaktifkan.
+  taxRate: (() => { const n = parseFloat(process.env.TAX_RATE); return Number.isNaN(n) ? 0.11 : n; })(),
+
+  // Kategori default bila tabel categories kosong
+  defaultCategories: ['Makanan', 'Minuman', 'Snack', 'Dessert'],
+
+  // HTTPS / TLS — jika kedua file ada, server jalan via HTTPS
+  ssl: {
+    keyFile: process.env.SSL_KEY_FILE || '',
+    certFile: process.env.SSL_CERT_FILE || '',
+    get enabled() { return !!(this.keyFile && this.certFile); },
+  },
+
+  // Backup database otomatis
+  backup: {
+    enabled: String(process.env.BACKUP_ENABLED || 'true') === 'true',
+    intervalHours: int(process.env.BACKUP_INTERVAL_HOURS, 24),
+    keep: int(process.env.BACKUP_KEEP, 7),
+    dir: process.env.BACKUP_DIR || path.join(__dirname, '..', '..', 'backups'),
+  },
+
   rateLimit: {
     windowMs: int(process.env.RATE_WINDOW_MS, 15 * 60 * 1000),
     max: int(process.env.RATE_MAX, 300),

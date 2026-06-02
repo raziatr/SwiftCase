@@ -39,6 +39,18 @@ exports.update = asyncHandler(async (req, res) => {
   res.json(admin);
 });
 
+// PATCH /api/admins/:id/toggle-active
+exports.toggleActive = asyncHandler(async (req, res) => {
+  const id = +req.params.id;
+  if (req.user && req.user.id === id) throw ApiError.badRequest('Tidak bisa menonaktifkan akun sendiri');
+  const cur = adminModel.findById(id);
+  if (!cur) throw ApiError.notFound('Akun tidak ditemukan');
+  if (cur.active && adminModel.countActive() <= 1) throw ApiError.badRequest('Minimal harus ada 1 akun admin yang aktif');
+  const admin = adminModel.toggleActive(id);
+  log.add({ actor: actorOf(req), action: admin.active ? 'Aktifkan akun' : 'Nonaktifkan akun', detail: admin.username, ip: req.ip });
+  res.json(admin);
+});
+
 // DELETE /api/admins/:id
 exports.remove = asyncHandler(async (req, res) => {
   const id = +req.params.id;
