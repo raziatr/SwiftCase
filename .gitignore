@@ -1,0 +1,21 @@
+# 1. Dependensi Node.js
+node_modules/
+backend/node_modules/
+
+# 2. Database & Backups SQLite (PENTING!)
+backend/data/
+backend/backups/
+*.db
+*.db-shm
+*.db-wal
+
+# 3. File Upload User
+backend/public/uploads/
+
+# 4. File Konfigurasi / Rahasia
+.env
+backend/.env
+
+# 5. File Sistem macOS
+.DS_Store
+**/.DS_Store
