@@ -1,6 +1,6 @@
-# SwiftCase POS
+# SwiftCase 
 
-Aplikasi **Point of Sale (POS)** untuk usaha kuliner — mendukung pemesanan oleh pelanggan, dapur/kasir, dan dashboard admin. Terdiri dari **frontend SPA satu file** (HTML + vanilla JS, tanpa build step) dan **backend REST API** (Node.js + Express + SQLite bawaan Node). Antarmuka **dwibahasa (Indonesia / English)** dan pembayaran **QRIS** via Xendit (mode mock untuk pengembangan lokal).
+**Swiftcase** adalah Aplikasi **Point of Sale (POS)** untuk usaha kuliner — mendukung pemesanan oleh pelanggan, dapur/kasir, dan dashboard admin. Terdiri dari **frontend SPA satu file** (HTML + vanilla JS, tanpa build step) dan **backend REST API** (Node.js + Express + SQLite bawaan Node). Antarmuka **dwibahasa (Indonesia / English)** dan pembayaran **QRIS** via Xendit (mode mock untuk pengembangan lokal).
 
 ---
 
@@ -147,7 +147,3 @@ npm run dev
 Server otomatis berjalan via HTTPS bila kedua file sertifikat tersedia.
 
 ---
-
-## 📄 Lisensi
-
-MIT
