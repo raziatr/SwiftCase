@@ -78,6 +78,7 @@ Saat pertama kali dijalankan, database otomatis dibuat dan diisi data contoh (pr
 | Peran | Username | Password |
 |-------|----------|----------|
 | Admin | `admin`  | `admin123` |
+| Customer | `john@mail.com`  | `123456` |
 
 > ⚠️ Ganti `ADMIN_PASSWORD` dan `JWT_SECRET` sebelum dipakai di produksi.
 
